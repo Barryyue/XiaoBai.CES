@@ -1,0 +1,128 @@
+﻿
+@{
+    ViewBag.Title = "项目首页";
+    Layout = "~/Views/Shared/_Layout_Content.cshtml";
+}
+@section styles
+{
+    <link href="/Content/css/plugins/jqgrid/ui.jqgrid.css" rel="stylesheet" />
+}
+
+<div class="wrapper wrapper-content">
+    <div class="ibox float-e-margins">
+        <div class="ibox-title">
+            <h5>项目管理</h5>
+            <div class="ibox-tools">
+                <a class="collapse-link">
+                    <i class="fa fa-chevron-up"></i>
+                </a>
+            </div>
+        </div>
+        <div class="ibox-content">
+            <div class="form-group">
+                <div class="input-group">
+                    <button id="btnSave" class="btn btn-success" type="button" disabled="disabled"> <i class="fa fa-save"></i> 保存</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="input-group">
+                    <input id="txtNumber" type="number" class="input form-control" placeholder="请输入套件数" />
+                    <span class="input-group-btn">
+                        <button id="btnAdd" class="btn btn-primary" type="button"> <i class="fa fa-search"></i> 添加</button>
+                    </span>
+                </div>
+            </div>
+
+            <div class="jqGrid_wrapper">
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts
+{
+    @Scripts.Render("~/content/js/list")
+    <script>
+        function addTables() {
+            var number = parseInt($("#txtNumber").val());
+            for (var i = 1; i <= number; i++) {
+                loadTable(i);
+            }
+            $("#btnSave").removeAttr("disabled");
+        }
+
+        function loadHtml(index) {
+            if (!$("#pager_list_" + index).html()) {
+                $(".jqGrid_wrapper").append('<table id="table_list_' + index + '"></table><div id="pager_list_' + index + '"></div>');
+            }
+        }
+
+        function loadTable(index) {
+            loadHtml(index);
+            var config = {
+                id: "table_list_" + index,
+                pagerId: "pager_list_" + index,
+                title: '套件' + index + '<label style="margin-left:20px;cursor:pointer;" onclick="delTable(' + index + ')"><i class="glyphicon glyphicon-remove-circle"></i></label>',
+                url: '@Url.Action("GetParts")',
+                colNames: ['主键', '项目名称', '价格', '操作'],
+                colModel: [
+                    { name: 'Id', index: 'Id', width: 60, key: true, hidden: true },
+                    { name: 'Name', index: 'Name', width: 60 },
+                    {
+                        name: 'Price',
+                        index: 'Price',
+                        width: 30,
+                        formatter: function(cellValue, options, rowObject) {
+                            return '<input id="txt_' + index + '_' + rowObject.Id + '" type="number" class="input form-control" placeholder="请输入价格" />';
+                        }
+                    },
+                    {
+                        name: 'Action',
+                        index: 'Action',
+                        width: 30,
+                        formatter: function(cellValue, options, rowObject) {
+                            return '<button type="button" class="btn btn-danger " onclick="delData(' + index + ',' + rowObject.Id + ')"><i class="fa fa-close"></i>&nbsp;&nbsp;<span class="bold">删除</span></button>';
+                        }
+                    }
+                ]
+            };
+
+            cesGrid.Load(config);
+        }
+
+        function delData(index, id) {
+            var grid = $("#table_list_" + index);
+            grid.delRowData(id);
+        }
+
+        function delTable(index) {
+            $("#pager_list_" + index).parent().remove();
+        }
+
+        function saveData() {
+            var btn = $(this);
+            var number = parseInt($("#txtNumber").val());
+            var datas = [];
+            for (var i = 1; i <= number; i++) {
+                var grid = $("#table_list_" + i);
+                if (grid.html()) {
+                    var data = { Name: "套件" + i, ProjectItems: [] };
+                    var ids = grid.getDataIDs();
+                    for (var j = 0, id; id = ids[j]; j++) {
+                        var row = grid.getRowData(id);
+                        data.ProjectItems.push({ Name: row.Name, Price: $("#txt_" + i + "_" + row.Id).val() });
+                    }
+                    datas.push(data);
+                }
+            }
+            XPage.DoPost(btn, '@Url.Action("SaveProject")', { projects: datas });
+        }
+
+        $(document).ready(function() {
+            $("#btnAdd").bind("click", addTables);
+            $("#btnSave").bind("click", saveData);
+        });
+    </script>
+}
